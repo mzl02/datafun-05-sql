@@ -1,0 +1,310 @@
+Module 5: Learn Databases and SQL
+Lots of data is stored in structured tables with columns and rows. Relational data indicates we can relate information in one table with information in another table by joining on similar columns. For example we might track all customers with their addresses, and assign a unique primary key to each customer. We can then use that Customer ID in related tables like "Orders". 
+
+SQL works with small data bases such as ones used on our mobile devices and browsers - as well as massive databases with millions of records. 
+
+Mastering SQL can take a while - there are huge books on it, and each might be different depending on the system (Oracle, SQL Server, PostgreSQL, SQLite and more). We cover just the basics of this powerful language for working with a database (a collections of tables), tables (like a single spreadsheet), and records (a single row in the table). 
+
+Many SQL operators and keywords are similar to Python. We'll follow best practices and keep SQL statements in their own files. 
+
+For more background, check out one of these or share your own suggestions. There's now an AI2sql that you can try free for 7 days to help you learn (see the RESOURCES area of this module). 
+
+W3 Schools at https://www.w3schools.com/sql/ Links to an external site.
+SQLBolt (interactive, concise) at https://sqlbolt.com/ Links to an external site.
+Textbook
+Read Chapter 17.2 carefully - it has a good, concise introduction to sql using a database built from this script: books.sql Download books.sql - Their example uses books also, but it's a different schema than ours. Ours uses GUIDs for IDs and offers a more real-world example than the simple schema they use to hold the author's textbooks. Both examples are useful - just try not to get them confused. 
+
+Our Project 5 specification is here: https://github.com/denisecase/datafun-05-spec Links to an external site. . As we've done before, we'll start our project with some basic core competencies:
+
+CC5.1: Start a new Project
+CC5.2: Use SQL with Python
+CC5.3 Plan the Project / Make Data Files
+Module 5 Skills focus on working with databases, tables, and records:
+
+Databases: Create (using Python)
+Tables: Create
+Records: Create with INSERT INTO
+Records: Read with SQL SELECT
+Records: Filter with WHERE (AND, OR, DISTINCT)
+Records: Sort with ORDER BY
+Records: INNER JOIN
+Records: UPDATE
+Records: DELETE FROM
+Records: COUNT, AVG, SUM, and GROUP BY 
+Read this page and the information given in Instructions below. As you work through the steps, you will be guided through getting started on Project 5 using a simple database schema with two related tables.  On the project, you can use the example authors and books tables we create below - or if you like choose any two related tables for your project - for example, players and teams or movies and directors, etc. Find something that interests you that you might like to have in your portfolio.
+
+As you explore these SQL statements, work through the textbook, use online SQL editors such as W3 Schools / SQL Links to an external site. or similar, and practice working with an AI assistant to create more interesting and expressive queries. 
+
+Read Chapter 17.2 SQL in our textbook. You may also find content from Chapter 9 helpful for working with data files. 
+
+1. Databases: Create (using Python)
+
+SQLite is a self-contained, serverless, and zero-configuration SQL database engine that doesn't require any external Database Management System (DBMS) like SQL Server or Oracle to operate. Each database is a self-contained file. SQLite is widely used in embedded systems, mobile applications, and for lightweight database needs. We use the sqlite3 library to interact with SQLite databases using Python. 
+
+Creating a database is a common task, so let's create a function to create the database. We'll need one input - the Path to the database file we want to create. 
+
+import sqlite3
+import pandas as pd
+import pathlib
+
+# Define the database file in the current root project directory
+db_file = pathlib.Path("project.sqlite3")
+
+def create_database():
+    """Function to create a database. Connecting for the first time
+    will create a new database file if it doesn't exist yet.
+    Close the connection after creating the database
+    to avoid locking the file."""
+    try:
+        conn = sqlite3.connect(db_file)
+        conn.close()
+        print("Database created successfully.")
+    except sqlite3.Error as e:
+        print("Error creating the database:", e)
+
+def main():
+    create_database()
+
+if __name__ == "__main__":
+    main()
+Try this several times, creating different database files. Practice deleting them and recreating empty databases to see how it works.
+
+There's an intermediate step that is very important that we do NOT cover in this course - and that's how to design a good database schema. The schema defines table names, fields, relationships, constraints and more. In this case, all that has been done for us already. In the module project, you can use the example to design a similar schema - or use the the schema and table design we provide. 
+
+ 
+
+2. Tables: Create
+Now, let's create some tables for the database. We do this with SQL CREATE TABLE statements. While setting things up, we typically re-run our Python code multiple times, so add some code to DROP TABLE IF EXISTS before creating (or recreating) the tables.
+
+-- Start by deleting any tables if the exist already
+-- We want to be able to re-run this script as needed.
+-- DROP tables in reverse order of creation 
+-- DROP dependent tables (with foreign keys) first
+
+DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS authors;
+
+-- Create the authors table 
+-- Note that the author table has no foreign keys, so it is a standalone table
+
+CREATE TABLE authors (
+    author_id TEXT PRIMARY KEY,
+    first_name TEXT,
+    last_name TEXT,
+    year_born INTEGER
+);
+
+-- Create the books table
+-- Note that the books table has a foreign key to the authors table
+-- This means that the books table is dependent on the authors table
+-- Be sure to create the standalone authors table BEFORE creating the books table.
+
+CREATE TABLE books (
+    book_id TEXT PRIMARY KEY,
+    title TEXT,
+    year_published INTEGER,
+    author_id TEXT,
+    FOREIGN KEY (author_id) REFERENCES authors(author_id)
+);
+
+Which table must be created first? Hint: Authors stands alone - it knows nothing about books, so we can make it anytime. Books needs to know about authors - if we try to run that first, what happens? Hint: try it. 
+SQL data types include INTEGER, TEXT, BOOLEAN, and REAL (for floating point numbers), and more. 
+
+You don't have to master SQL for creating tables in this course, just know what SQL can do and read the table-related commands as needed. We often have the data already, so focusing on the records (rows) in the tables is critical. 
+
+Let's create a reusable function to execute a SQL command from a file. Just provide the database and a path to the sql file with the command. 
+
+def create_tables():
+    """Function to read and execute SQL statements to create tables"""
+    try:
+        with sqlite3.connect(db_file) as conn:
+            sql_file = pathlib.Path("sql", "create_tables.sql")
+            with open(sql_file, "r") as file:
+                sql_script = file.read()
+            conn.executescript(sql_script)
+            print("Tables created successfully.")
+    except sqlite3.Error as e:
+        print("Error creating tables:", e)
+Creating a function for each task keeps our code organized. Update your main() function to call this one as well. 
+
+def main():
+    create_database()
+    create_tables()
+3a. Records: Create with INSERT INTO
+We can populate our tables in several ways - we'll look at two: (1) Using SQL INSERT INTO statements and (2) populating tables directly from compatible data files.
+
+These simple examples use INSERT INTO statements to populate tables. These statements make it easy to create and populate your database when using online SQL tools for practice. Here are some simple examples (using a slightly different author schema):
+
+-- Insert a single author
+INSERT INTO authors (name) VALUES ('John Doe');
+
+-- Insert multiple authors in a single statement
+INSERT INTO authors (name) VALUES ('Alice Smith'), ('Bob Johnson'), ('Eva Brown');
+
+-- Insert an author and retrieve the auto-generated ID (SQLite specific)
+INSERT INTO authors (name) VALUES ('Jane Green');
+SELECT last_insert_rowid();
+Populating our two project tables might look like the following.  
+
+sql/insert_records.sql
+
+ 
+
+-- Insert authors data
+INSERT INTO authors (author_id, first_name, last_name, year_born)
+VALUES
+    ('10f88232-1ae7-4d88-a6a2-dfcebb22a596', 'Harper', 'Lee', NULL),
+    ('c3a47e85-2a6b-4196-a7a8-8b55d8fc1f70', 'George', 'Orwell', NULL),
+    ('e0b75863-866d-4db4-85c7-df9bb8ee6dab', 'F. Scott', 'Fitzgerald', NULL),
+    ('7b144e32-7ff4-4b58-8eb0-e63d3c9f9b8d', 'Aldous', 'Huxley', NULL),
+    ('8d8107b6-1f24-481c-8a21-7d72b13b59b5', 'J.D.', 'Salinger', NULL),
+    ('0cc3c8e4-e0c0-482f-b2f7-af87330de214', 'Ray', 'Bradbury', NULL),
+    ('4dca0632-2c53-490c-99d5-4f6d41e56c0e', 'Jane', 'Austen', NULL),
+    ('16f3e0a1-24cb-4ed6-a50d-509f63e367f7', 'J.R.R.', 'Tolkien', NULL),
+    ('06cf58ab-90f1-448d-8e54-055e4393e75c', 'J.R.R.', 'Tolkien', NULL),
+    ('6b693b96-394a-4a1d-a4e2-792a47d7a568', 'J.K.', 'Rowling', NULL);
+
+
+-- Insert books data
+INSERT INTO books (book_id, title, year_published, author_id)
+VALUES
+    ('d6f83870-ff21-4a5d-90ab-26a49ab6ed12', 'To Kill a Mockingbird', 1960, '10f88232-1ae7-4d88-a6a2-dfcebb22a596'),
+    ('0f5f44f7-44d8-4f49-b8c4-c64d847587d3', '1984', 1949, 'c3a47e85-2a6b-4196-a7a8-8b55d8fc1f70'),
+    ('f9d9e7de-c44d-4d1d-b3ab-59343bf32bc2', 'The Great Gatsby', 1925, 'e0b75863-866d-4db4-85c7-df9bb8ee6dab'),
+    ('38e530f1-228f-4d6e-a587-2ed4d6c44e9c', 'Brave New World', 1932, '7b144e32-7ff4-4b58-8eb0-e63d3c9f9b8d'),
+    ('c2a62a4b-cf5c-4246-9bf7-b2601d542e6d', 'The Catcher in the Rye', 1951, '8d8107b6-1f24-481c-8a21-7d72b13b59b5'),
+    ('3a1d835c-1e15-4a48-8e8c-b12239604e98', 'Fahrenheit 451', 1953, '0cc3c8e4-e0c0-482f-b2f7-af87330de214'),
+    ('c6e67918-e509-4a6b-bc3a-979f6ad802f0', 'Pride and Prejudice', 1813, '4dca0632-2c53-490c-99d5-4f6d41e56c0e'),
+    ('be951205-6cc2-4b3d-96f1-7257b8fc8c0f', 'The Hobbit', 1937, '16f3e0a1-24cb-4ed6-a50
+
+3b. Records: Create from Data Files
+Populating tables right from data at rest (static data files, e.g., csv files) is also very common. For this project, we have our csv files in the data folder. We can write a function to populate them right from the CSV using pandas.  Note that the data must be compatible with our table structure for the direct import to work. Typically, there will be much more data cleaning and munging required to go from one system's Excel or csv files into a centralized relational database system. Optional/aside: For modern data storage formats, look up data warehouses, data lakes, and data lakehouses. 
+
+def insert_data_from_csv():
+    """Function to use pandas to read data from CSV files (in 'data' folder)
+    and insert the records into their respective tables."""
+    try:
+        author_data_path = pathlib.Path("data", "authors.csv")
+        book_data_path = pathlib.Path("data", "books.csv")
+        authors_df = pd.read_csv(author_data_path)
+        books_df = pd.read_csv(book_data_path)
+        with sqlite3.connect(db_file) as conn:
+            # use the pandas DataFrame to_sql() method to insert data
+            # pass in the table name and the connection
+            authors_df.to_sql("authors", conn, if_exists="replace", index=False)
+            books_df.to_sql("books", conn, if_exists="replace", index=False)
+            print("Data inserted successfully.")
+    except (sqlite3.Error, pd.errors.EmptyDataError, FileNotFoundError) as e:
+        print("Error inserting data:", e)
+After adding your function to either insert records from csv or insert records by running a sql script, update your main() function to call your new function that inserts records. For example:
+
+def main():
+    create_database()
+    create_tables()
+    insert_data_from_csv()
+4. Records: Read with SQL SELECT
+SQL makes it easy to retrieve information from tables as well. Understand how to use SELECT queries to get different pieces of information, like listing all movies of a certain genre.
+
+
+-- Select all movies
+SELECT * FROM movies;
+
+The * will select all fields. It's better practice to actually list the fields you want returned like this. 
+
+-- Select specific fields from the movies table
+SELECT title, genre, director, release_year
+FROM movies;
+5. Records: Filter with WHERE (AND, OR, DISTINCT)
+As you work through these, use your textbook and any other resources. Learn to filter data using the WHERE clause. Practice writing queries to select based on specific criteria, such as movies released after a certain year or movies by a specific director.
+
+Just like Python, you can use operators (e.g., <, >) including AND and OR to combine conditions.
+
+To avoid duplicate records, use SELECT DISTINCT.
+
+-- Select movies of a specific genre
+SELECT * FROM movies WHERE genre = 'Action';
+
+-- Select movies released after a certain year
+SELECT * FROM movies WHERE release_year > 2000;
+
+-- Select movies directed by a specific director
+SELECT * FROM movies WHERE director = 'Quentin Tarantino';
+
+-- Use distinct and combine conditions
+SELECT DISTINCT director FROM movies WHERE Year > 2000 AND Year < 2020;
+6. Records: Sort with ORDER BY
+Master sorting query results with ORDER BY. Practice organizing information by different criteria, like sorting movies by release year or by ratings.
+
+-- Sort movies by release year in ascending order
+SELECT * FROM movies ORDER BY release_year;
+
+-- Sort movies by title in descending order
+SELECT * FROM movies ORDER BY title DESC;
+7. Records: INNER JOIN
+Explore how to use INNER JOIN to combine data from multiple tables. 
+
+-- Example of an Inner join between authors and books tables
+SELECT authors.first_name, authors.last_name, books.title, books.year_published
+FROM authors
+INNER JOIN books ON authors.author_id = books.author_id;
+ 
+
+ 
+
+8. Records: UPDATE
+Learn how to update existing records with the UPDATE statement. Practice scenarios might include updating the genre of a movie or correcting a movie's release year.
+
+-- Update the genre of a movie
+UPDATE movies
+SET genre = 'Adventure'
+WHERE title = 'The Dark Knight';
+
+-- Correct the release year of a movie
+UPDATE movies
+SET release_year = 2008
+WHERE title = 'Pulp Fiction';
+ 
+
+9. Records: DELETE FROM
+Understand how to delete records with DELETE FROM. Learn to remove specific records, like deleting movies that have been discontinued or have low ratings.
+
+ 
+
+-- Delete movies by title
+DELETE FROM movies WHERE title IN ('Batman', 'Spiderman', 'Avatar');
+
+-- Delete discontinued movies
+DELETE FROM movies WHERE discontinued = 1;
+
+-- Delete movies with a rating below 5.0
+DELETE FROM movies WHERE rating < 5.0;
+ 
+
+10. Records: COUNT, AVG, SUM, and GROUP BY 
+SQL Functions
+Like Python, SQL has built in functions, including COUNT(), AVG(), and SUM(). 
+
+ 
+
+-- count all rows
+SELECT COUNT(*) FROM sales;
+ 
+
+-- get average amount
+SELECT AVG(amount) FROM sales;
+ 
+
+-- combine functions
+SELECT SUM(amount), AVG(amount), COUNT(*) FROM sales;
+ 
+
+Grouping Data
+
+These functions become even more powerful when used with the GROUP BY clause for grouped data analysis. See your textbook for more information. 
+
+
+-- Get the total sales and average sales amount by a salesperson
+SELECT salesperson_id, SUM(amount), AVG(amount) 
+FROM sales 
+GROUP BY salesperson_id;
+
